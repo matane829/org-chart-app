@@ -1,38 +1,27 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React from 'react';
 import { OrgChart } from 'd3-org-chart';
 
-export const OrgChartComponent = (props, ref) => {
-  const d3Container = useRef(null);
-  let chart = null;
+export const OrgChartComponent = ({ data }) => {
+  const d3Container = React.useRef(null);
+  let chart = new OrgChart();
 
-  function addNode(node) {
-    chart.addNode(node);
-  }
-
-  props.setClick(addNode);
-
-  // We need to manipulate DOM
-  useLayoutEffect(() => {
-    if (props.data && d3Container.current) {
-      if (!chart) {
-        chart = new OrgChart();
-      }
+  React.useLayoutEffect(() => {
+    if (data && d3Container.current) {
       chart
         .container(d3Container.current)
-        .data(props.data)
+        .data(data)
         .nodeWidth((d) => 200)
         .nodeHeight((d) => 120)
-        .onNodeClick((d, i, arr) => {
-          console.log(d, 'Id of clicked node ');
-          props.onNodeClick(d);
-        })
+        .nodeContent(({ data }) => `<div class="card"><h1>${data.id}</h1></div>`)
         .render();
     }
-  }, [props.data, d3Container.current]);
+  }, [data, chart]);
 
   return (
     <div>
-      <div ref={d3Container} />
+      Click node to trigger action in parent or &nbsp;
+      <button onClick={() => chart.addNode({ "id": 11, "parentId": 1 })}>add node as root's child</button>
+      <div className='container' ref={d3Container} />
     </div>
   );
 };

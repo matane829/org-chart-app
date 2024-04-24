@@ -5,3 +5,19 @@ body {
 h1, p {
   font-family: Lato;
 }
+
+.container {
+  background-color: aqua;
+}
+
+.card{
+  background-color: maroon;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.card > * {
+  background-color: green;
+}
