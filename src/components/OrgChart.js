@@ -8,6 +8,7 @@ export const OrgChartComponent = ({ data }) => {
 
   const [ compact, setCompact ] = React.useState(false);
   const [ expandAll, setExpandAll ] = React.useState();
+  const [ popupContent, setPopupContent ] = React.useState(false);
   const exportChart = {
     'Screen': () => chart.exportImg(),
     'PNG': () => chart.exportImg({ full: true }),
@@ -20,16 +21,21 @@ export const OrgChartComponent = ({ data }) => {
       chart
         .container(d3Container.current)
         .data(data)
-        .nodeWidth((d) => 200)
-        .nodeHeight((d) => 120)
+        .nodeWidth(d => 400)
+        .nodeHeight(d => 120)
         .compact(compact)
+        .onNodeClick(({ data }) => chart.clearHighlighting().setHighlighted(data.id).render())
         // the html for the card itself for the chart
-        .nodeContent(({ data }) => `<div class="card" style='background-color: maroon;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center'><h1>${data.id}</h1></div>
-        <button onclick="highlightToRoot('${data.id}')">Highlight to root</button>`)
+        .nodeContent(({ data }) => `
+        <div class="card" 
+          style='background-color: maroon;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center'>
+          <h1>${data.id}</h1>
+        </div>
+        `)
         .render().fit();
 
         if(expandAll)
@@ -102,9 +108,28 @@ window.highlightToRoot = id => chart.clearHighlighting().setUpToTheRootHighlight
       exportChart[selectedExportOption]();
     }
   };
+
+  const handleAddNode = () => {
+    const addContent = <form>
+      <h1>Add node</h1>
+      <label htmlFor="input-parentId">parentId: </label><input type="text" id="input-parentId"/>
+      <label htmlFor="input-nodeId">nodeId: </label><input type="text" id="input-nodeId"/>
+    </form>
+
+    setPopupContent(addContent);
+  }
   
   return (
     <div>
+      {popupContent && 
+      <div className='popup-container' onClick={() => setPopupContent(false)}>
+        <div className='popup' onClick={e => e.stopPropagation()}>
+          <span className='popup-exit' onClick={() => setPopupContent(false)}>X</span>
+          <div className='popup-content'>
+            {popupContent}
+          </div>
+        </div>
+      </div>}
       <button onClick={() => setCompact(!compact)}>{compact ? "Horizontial" : "Compact"}</button>
       <span>
         <label htmlFor="export">Export </label>
@@ -116,7 +141,8 @@ window.highlightToRoot = id => chart.clearHighlighting().setUpToTheRootHighlight
       <button onClick={() => {setExpandAll(!expandAll)}}>{expandAll ? "collapseAll" : "expandAll"}</button>
       <input type="search" placeholder="search by name" onInput={filterChart}/>
       
-      <button onClick={() => chart.addNode({ "id": 14, "parentId": 1 })}>add node</button>
+      <button onClick={handleAddNode}>add node</button>
+
       <div className='container' ref={d3Container} />
     </div>
   );
