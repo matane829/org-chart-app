@@ -21,10 +21,10 @@ export const OrgChartComponent = ({ data }) => {
       chart
         .container(d3Container.current)
         .data(data)
-        .nodeWidth(d => 400)
+        .nodeWidth(d => 200)
         .nodeHeight(d => 120)
         .compact(compact)
-        .onNodeClick(({ data }) => chart.clearHighlighting().setHighlighted(data.id).render())
+        .onNodeClick(d => handleNodeClick(d))
         // the html for the card itself for the chart
         .nodeContent(({ data }) => `
         <div class="card" 
@@ -33,7 +33,14 @@ export const OrgChartComponent = ({ data }) => {
           flex-direction: column;
           align-items: center;
           justify-content: center'>
-          <h1>${data.id}</h1>
+          <div class="card-data">
+            <h1>${data.id}</h1>
+          </div>
+          <div class="card-menu">
+            <button onclick="handleAddNode(${data.id})">add node</button>
+            <button onclick="handleRemoveNode(${data.id})">delete node</button>
+            <button onclick="handleHighlightToRoot(event, ${data.id})">highlight to root</button>
+          </div>
         </div>
         `)
         .render().fit();
@@ -42,14 +49,26 @@ export const OrgChartComponent = ({ data }) => {
           chart.expandAll(true).render().fit();
         else if(expandAll === false)
           chart.collapseAll(true).render().fit();
-      
+    
+    function handleNodeClick(d){
+      chart.clearHighlighting().setHighlighted(d.data.id).render();
+    }
   }
 }, [data, chart, compact, expandAll]);
 
 // highlighting to root
-window.highlightToRoot = id => chart.clearHighlighting().setUpToTheRootHighlighted(id).render().fit();
+window.handleRemoveNode = (id) => chart.removeNode(id)
+window.handleHighlightToRoot = (e, id) => {
+  e.stopPropagation()
+  chart.clearHighlighting().setUpToTheRootHighlighted(id).render().fit()
+};
 
-  
+window.handleAddNode = (parentId) => {
+  const id = Math.max(...chart.data().map(node => node.id)) + 1;
+  chart.addNode({ parentId, id}).setExpanded(id).setCentered(parentId).render();
+}
+
+
   function filterChart(e) {
     // Get input value
     const value = e.target.value;
@@ -108,16 +127,6 @@ window.highlightToRoot = id => chart.clearHighlighting().setUpToTheRootHighlight
       exportChart[selectedExportOption]();
     }
   };
-
-  const handleAddNode = () => {
-    const addContent = <form>
-      <h1>Add node</h1>
-      <label htmlFor="input-parentId">parentId: </label><input type="text" id="input-parentId"/>
-      <label htmlFor="input-nodeId">nodeId: </label><input type="text" id="input-nodeId"/>
-    </form>
-
-    setPopupContent(addContent);
-  }
   
   return (
     <div>
@@ -140,8 +149,9 @@ window.highlightToRoot = id => chart.clearHighlighting().setUpToTheRootHighlight
       </span>
       <button onClick={() => {setExpandAll(!expandAll)}}>{expandAll ? "collapseAll" : "expandAll"}</button>
       <input type="search" placeholder="search by name" onInput={filterChart}/>
-      
-      <button onClick={handleAddNode}>add node</button>
+      <button onClick={() => chart.clearHighlighting()}>Clear</button>
+      <button onClick={() => chart.zoomIn()}>+</button>
+      <button onClick={() => chart.zoomOut()}>-</button>
 
       <div className='container' ref={d3Container} />
     </div>
