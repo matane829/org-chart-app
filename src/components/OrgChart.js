@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { OrgChart } from 'd3-org-chart';
 import jsPDF from 'jspdf';
+import * as d3 from 'd3';
 
 export const OrgChartComponent = ({ data }) => {
   const d3Container = React.useRef(null);
@@ -25,14 +26,21 @@ export const OrgChartComponent = ({ data }) => {
         .nodeHeight(d => 120)
         .compact(compact)
         .onNodeClick(d => handleNodeClick(d))
+        .linkUpdate(function () {
+          d3.select(this)
+            .attr('stroke-width', '5px')
+            .style('stroke', 'lightgray');
+        })
         // the html for the card itself for the chart
         .nodeContent(({ data }) => `
         <div class="card" 
-          style='background-color: maroon;
+          style='background-color: #748eff;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center'>
+          justify-content: center;
+          border: 1px solid #E4E2E9";
+          border-radius:50px'>
           <div class="card-data">
             <h1>${data.id}</h1>
           </div>
