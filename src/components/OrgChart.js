@@ -45,9 +45,9 @@ export const OrgChartComponent = ({ data }) => {
             <h1>${data.id}</h1>
           </div>
           <div class="card-menu">
-            <button onclick="handleAddNode(${data.id})">add node</button>
-            <button onclick="handleRemoveNode(${data.id})">delete node</button>
-            <button onclick="handleHighlightToRoot(event, ${data.id})">highlight to root</button>
+            <button onclick="handleAddNode("${data.id}")">add node</button>
+            <button onclick="handleRemoveNode("${data.id}")">delete node</button>
+            <button onclick="handleHighlightToRoot(event, "${data.id}")">highlight to root</button>
           </div>
         </div>
         `)

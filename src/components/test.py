@@ -1,46 +1,5 @@
 import pandas as pd
 
-def latest_same_column_with_id(df, main_columns, id_columns):
-    latest_column = None
-    for main_col, id_col in zip(main_columns, id_columns):
-        combined_col = main_col
-        if all(df[main_col] == df[main_col].iloc[0]) and all(df[id_col] == df[id_col].iloc[0]):
-            latest_column = combined_col
-    return latest_column
-
-def create_level_hierarchy_df(df, levels, highest_level):
-    level_hierarchy_data = []
-
-    # Find index of highest level column
-    highest_level_index = levels.index(highest_level)
-
-    # Iterate over each level from the highest level downwards
-    for i in range(highest_level_index, -1, -1):
-        level = levels[i]
-        parent_level = None
-        parent_level_id = None
-
-        # Find parent level
-        for j in range(i - 1, -1, -1):
-            if df[levels[j]].iloc[0] != '':
-                parent_level = df[levels[j]].iloc[0]
-                parent_level_id = df[levels[j] + '-id'].iloc[0]
-                break
-
-        # Create DataFrame rows for current level
-        for index, row in df.iterrows():
-            level_value = row[level]
-            level_id = row[level + '-id']
-            level_hierarchy_data.append([level, level_value, level_id, parent_level, parent_level_id])
-
-            # Update parent level for next iteration
-            parent_level = level_value
-            parent_level_id = level_id
-
-    # Create DataFrame
-    level_hierarchy_df = pd.DataFrame(level_hierarchy_data, columns=['Level', 'Value', 'Value-ID', 'Parent Value', 'Parent Value-ID'])
-    return level_hierarchy_df
-
 # Provided table data
 table_data = [
     ['attack', 'hir', 'basic hir', 1, 'operational', 1, 'p-ltk', 1, 'cover', 1],
@@ -66,11 +25,57 @@ levels = ['batt', 'com', 'plat', 'squad']
 # Create DataFrame
 df = pd.DataFrame(table_data, columns=['subject', 'personal', 'batt', 'batt-id', 'com', 'com-id', 'plat', 'plat-id', 'squad', 'squad-id'])
 
-# Determine highest level
-highest_level = latest_same_column_with_id(df, levels, [level + '-id' for level in levels])
 
-# Create level hierarchy DataFrame
-level_hierarchy_df = create_level_hierarchy_df(df, levels, highest_level)
+def latest_same_column_with_id(df, main_columns, id_columns):
+    latest_column = None
+    for main_col, id_col in zip(main_columns, id_columns):
+        combined_col = main_col
+        if all(df[main_col] == df[main_col].iloc[0]) and all(df[id_col] == df[id_col].iloc[0]):
+            latest_column = combined_col
+    return latest_column
 
-# Display the result
-print(level_hierarchy_df)
+def create_hierarchy_tree(df, highest_level, parent=None):
+    tree = []
+    stack = []
+    root_nodes = df[df[highest_level] == df[highest_level].iloc[0]].copy()
+    
+    for index, row in root_nodes.iterrows():
+        node = {}
+        node['subject'] = row['subject']
+        node['personal'] = row['personal']
+        node['head'] = highest_level
+        node['id'] = row['{}-id'.format(highest_level.replace('-', '_'))]
+        node['name'] = row[highest_level]
+        stack.append((node, row))
+    
+    while stack:
+        current_node, current_row = stack.pop()
+        children = []
+        
+        for level in ['batt', 'com', 'plat', 'squad']:
+            level_data = df[df[level] == current_row[level]].copy()
+            
+            for _, row in level_data.iterrows():
+                child_node = {}
+                child_node['subject'] = row['subject']
+                child_node['personal'] = row['personal']
+                child_node['head'] = level
+                child_node['id'] = row['{}-id'.format(level.replace('-', '_'))]
+                child_node['name'] = row[level]
+                if parent is not None:
+                    child_node['parent'] = parent
+                children.append(child_node)
+                
+            if children:
+                current_node['children'] = children
+        
+        tree.append(current_node)
+        stack.extend([(child, current_row) for child in children])
+    
+    return tree
+
+# Example usage
+highest_level = latest_same_column_with_id(df,['batt', 'com', 'plat', 'squad'],['batt-id', 'com-id', 'plat-id', 'squad-id'])
+print(highest_level)
+tree = create_hierarchy_tree(df, highest_level)
+print(tree)
