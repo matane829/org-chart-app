@@ -9,7 +9,6 @@ export const OrgChartComponent = ({ data }) => {
 
   const [ compact, setCompact ] = React.useState(false);
   const [ expandAll, setExpandAll ] = React.useState();
-  const [ popupContent, setPopupContent ] = React.useState(false);
   const exportChart = {
     'Screen': () => chart.exportImg(),
     'PNG': () => chart.exportImg({ full: true }),
@@ -17,64 +16,89 @@ export const OrgChartComponent = ({ data }) => {
     'PDF': () => downloadPdf()
   }
 
-  React.useLayoutEffect(() => {
-    if (data && d3Container.current) {
-      chart
-        .container(d3Container.current)
-        .data(data)
-        .nodeWidth(d => 200)
-        .nodeHeight(d => 120)
-        .compact(compact)
-        .onNodeClick(d => handleNodeClick(d))
-        .linkUpdate(function () {
-          d3.select(this)
-            .attr('stroke-width', '5px')
-            .style('stroke', 'lightgray');
-        })
-        // the html for the card itself for the chart
-        .nodeContent(({ data }) => `
-        <div class="card" 
-          style='background-color: #748eff;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid #E4E2E9";
-          border-radius:50px'>
-          <div class="card-data">
+  React.useEffect(() => {
+    if (!data || !d3Container.current)
+      return;
+
+    const style = `
+    background-color: #748eff;
+    border-radius: 40px;
+    border: 1px solid #E4E2E9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
+  `
+
+    function handleNodeClick(e, d){
+      chart.clearHighlighting().setHighlighted(d.data.id).render();;
+    }
+
+    chart
+      .container(d3Container.current)
+      .data(data)
+      .nodeWidth(d => 300)
+      .nodeHeight(d => 180)
+      .compact(compact)
+      .onNodeClick(d => handleNodeClick(this, d))
+      // node draw style
+      .nodeUpdate(function (d) {
+        d3.select(this)
+        .select('.node-rect')
+        .attr("stroke", d => d.data._highlighted || d.data._upToTheRootHighlighted ? '#E27396' : 'none')
+        .attr("stroke-width", d.data._highlighted || d.data._upToTheRootHighlighted ? 10 : 1)
+        .attr('rx', 40)
+      })
+      // link draw style 
+      .linkUpdate(function (d) {
+        d3.select(this)
+        .attr("stroke", d => d.data._upToTheRootHighlighted ? '#E27396' : '#E4E2E9')
+        .attr("stroke-width", d => d.data._upToTheRootHighlighted ? 10 : 5)
+        
+        if (d.data._upToTheRootHighlighted) 
+          d3.select(this).raise()
+      })
+      .nodeContent( ({ data }) => `
+        <div className="card" style='${style}'>
+          <div className="card-data">
             <h1>${data.id}</h1>
           </div>
-          <div class="card-menu">
-            <button onclick="handleAddNode(${data.id})">add node</button>
-            <button onclick="handleRemoveNode(${data.id})">delete node</button>
-            <button onclick="handleHighlightToRoot(event, ${data.id})">highlight to root</button>
+          <div className="card-menu">
+            <button onclick="handleAddNode(event, '${data.id}')">add node</button>
+            <button onclick="handleRemoveNode(event, '${data.id}')">delete node</button>
+            <button onclick="handleHighlightToRoot(event, '${data.id}')">highlight to root</button>
           </div>
         </div>
-        `)
-        .render().fit();
+      `)
+      .render().fit();
 
-        if(expandAll)
-          chart.expandAll(true).render().fit();
-        else if(expandAll === false)
-          chart.collapseAll(true).render().fit();
+      if(expandAll)
+        chart.expandAll(true).render().fit();
+      else if(expandAll === false)
+        chart.collapseAll(true).render().fit();
     
-    function handleNodeClick(d){
-      chart.clearHighlighting().setHighlighted(d.data.id).render();
-    }
-  }
+
 }, [data, chart, compact, expandAll]);
 
-// highlighting to root
-window.handleRemoveNode = (id) => chart.removeNode(id)
-window.handleHighlightToRoot = (e, id) => {
-  e.stopPropagation()
-  chart.clearHighlighting().setUpToTheRootHighlighted(id).render().fit()
-};
-
-window.handleAddNode = (parentId) => {
-  const id = Math.max(...chart.data().map(node => node.id)) + 1;
-  chart.addNode({ parentId, id}).setExpanded(id).setCentered(parentId).render();
-}
+  // highlighting to root
+  window.handleRemoveNode = (e, id) => {
+    e.stopPropagation();
+    chart.removeNode(id);
+  }
+  window.handleHighlightToRoot = (e, id) => {
+    e.stopPropagation();
+    chart.clearHighlighting().setUpToTheRootHighlighted(id).render().fit();
+  };
+  
+  window.handleAddNode = (e, parentId) => {
+    e.stopPropagation();
+    // chart.addNode({ parentId, id}).setExpanded(id).setCentered(parentId).render();
+  }
 
 
   function filterChart(e) {
@@ -138,15 +162,6 @@ window.handleAddNode = (parentId) => {
   
   return (
     <div>
-      {popupContent && 
-      <div className='popup-container' onClick={() => setPopupContent(false)}>
-        <div className='popup' onClick={e => e.stopPropagation()}>
-          <span className='popup-exit' onClick={() => setPopupContent(false)}>X</span>
-          <div className='popup-content'>
-            {popupContent}
-          </div>
-        </div>
-      </div>}
       <button onClick={() => setCompact(!compact)}>{compact ? "Horizontial" : "Compact"}</button>
       <span>
         <label htmlFor="export">Export </label>
@@ -161,7 +176,7 @@ window.handleAddNode = (parentId) => {
       <button onClick={() => chart.zoomIn()}>+</button>
       <button onClick={() => chart.zoomOut()}>-</button>
 
-      <div className='container' ref={d3Container} />
+      <div ref={d3Container} />
     </div>
   );
 };
